@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bus Route Optimizer</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        input, select, button { margin: 10px; padding: 8px; }
+        .result { border: 1px solid #ccc; padding: 10px; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+<h2>Bus Route Finder</h2>
+
+<input type="text" id="source" placeholder="Enter Source City">
+<input type="text" id="destination" placeholder="Enter Destination City">
+<input type="text" id="pref" placeholder="Optimization Preference (cost/duration/leave empty for balanced):"><br><br>
+
+<br>
+
+<button onclick="findRoute()" id="btn">Find Route</button>
+<span id="loading" style="display:none; margin-left:10px;">Loading....</span>
+
+<div id="output"></div>
+
+<script>
+async function findRoute() {
+    const source = document.getElementById("source").value;
+    const destination = document.getElementById("destination").value;
+    const pref = document.getElementById("pref").value;
+
+    const loading = document.getElementById("loading");
+    const button = document.getElementById("btn");
+
+    // Show loading + disable button
+    loading.style.display = "inline";
+    button.disabled = true;
+
+    try {
+        const response = await fetch("find-route", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                source: source,
+                destination: destination,
+                pref: pref
+            })
+        });
+
+        const data = await response.json();
+
+        const output = document.getElementById("output");
+        output.innerHTML = "";
+
+        if (data.error) {
+            output.innerHTML = `<p>${data.error}</p>`;
+            return;
+        }
+
+        data.forEach((route, index) => {
+            let html = `
+            <div class="result">
+                <h3>Route ${index+1}</h3>
+                <p><b>Fitness:</b> ${route.fitness}</p>
+                <p><b>Transfers:</b> ${route.transfers}</p>
+                <p><b>Cost:</b> ₹${route.total_cost}</p>
+                <p><b>Duration:</b> ${route.total_duration}</p>
+            `;
+
+            route.steps.forEach(step => {
+                html += `
+                    <p>${step.from} → ${step.to} | ${step.operator} | ${step.departure} - ${step.arrival} | ₹${step.cost}</p>
+                `;
+            });
+
+            html += `</div>`;
+            output.innerHTML += html;
+        });
+
+    } catch (err) {
+        document.getElementById("output").innerHTML = "<p>Error fetching route</p>";
+    } finally {
+        // Hide loading + enable button
+        loading.style.display = "none";
+        button.disabled = false;
+    }
+}
+</script>
+
+</body>
+</html>
